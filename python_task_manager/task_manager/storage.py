@@ -77,3 +77,12 @@ class TaskStore:
 
     def close(self):
         self.connection.close()
+
+
+
+function getRating(score) {
+  if (score < 1 || score > 5) return "Invalid rating";
+  return `${score}/5`;
+}
+ 
+console.log(getRating(1));
