@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from task_manager.storage import TaskStore
+from main import import_workflow, load_workflow, workflow_names
 
 
 class TaskStoreTests(unittest.TestCase):
@@ -49,6 +50,51 @@ class TaskStoreTests(unittest.TestCase):
                 self.assertEqual(second.list_tasks()[0]["title"], "Remember me")
             finally:
                 second.close()
+
+
+class WorkflowTests(unittest.TestCase):
+    def test_all_workflows_and_exact_file_sizes(self):
+        names = workflow_names()
+        self.assertEqual(len(names), 100)
+        store = TaskStore(":memory:")
+        self.addCleanup(store.close)
+        for name in names:
+            with self.subTest(workflow=name):
+                module = load_workflow(name)
+                lines = Path(module.__file__).read_text(encoding="utf-8").splitlines()
+                self.assertEqual(len(lines), 100)
+                self.assertTrue(all(line.strip() for line in lines))
+                tasks = module.build_tasks("2026-12-29")
+                self.assertEqual(len(tasks), 12)
+                self.assertEqual(tasks[0]["due_date"], "2026-12-29")
+                self.assertEqual(tasks[-1]["due_date"], "2027-01-03")
+                self.assertEqual(module.summary()["id"], name)
+                self.assertEqual(module.summary()["high_priority_tasks"], 3)
+                tasks[0]["title"] = "Changed copy"
+                self.assertNotEqual(module.build_tasks()[0]["title"], "Changed copy")
+                for task in module.build_tasks("2026-12-29"):
+                    store.save(**task)
+        self.assertEqual(len(store.list_tasks()), 1200)
+
+    def test_import_persists_tasks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "tasks.db"
+            self.assertEqual(import_workflow(database, "python_app_planning", "2026-10-08"), 12)
+            store = TaskStore(database)
+            try:
+                self.assertEqual(len(store.list_tasks()), 12)
+                self.assertTrue(all(task["title"].startswith("Python application:")
+                                    for task in store.list_tasks()))
+            finally:
+                store.close()
+
+    def test_invalid_import_does_not_create_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Path(directory) / "tasks.db"
+            for name, start in (("missing", None), ("python_app_planning", "2026-02-30")):
+                with self.subTest(name=name, start=start), self.assertRaises(ValueError):
+                    import_workflow(database, name, start)
+                self.assertFalse(database.exists())
 
 
 if __name__ == "__main__":
