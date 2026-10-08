@@ -27,8 +27,6 @@ that file. You may choose another location:
 python main.py --database "E:\my-tasks.db"
 ```
 
-## Check
-
 ## Built-in workflows
 
 The `task_manager/workflows` directory contains exactly **100 Python files of 100

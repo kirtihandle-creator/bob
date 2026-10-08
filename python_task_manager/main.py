@@ -62,6 +62,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 import React from "react";
 
 function App() {
@@ -73,5 +75,44 @@ function App() {
         Click Me
       </button>
     </div>
+  );
+}
+import React, { useState } from "react";
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "#0f172a",
+        color: "white",
+        fontFamily: "system-ui, sans-serif",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <h1>My React App</h1>
+
+        <p>Count: {count}</p>
+
+        <button
+          onClick={() => setCount((value) => value + 1)}
+          style={{
+            padding: "10px 18px",
+            border: 0,
+            borderRadius: 8,
+            background: "#3b82f6",
+            color: "white",
+            cursor: "pointer",
+            fontSize: 16,
+          }}
+        >
+          Click me
+        </button>
+      </div>
+    </main>
   );
 }
