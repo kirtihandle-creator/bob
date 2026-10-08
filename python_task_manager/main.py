@@ -64,7 +64,6 @@ if __name__ == "__main__":
     main()
 
 
-Preserved TSX reference (not executable Python):
 import React from "react";
 
 function App() {
