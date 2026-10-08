@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--database", type=Path, default=Path(__file__).parent / "data" / "tasks.db",
                         help="SQLite database location")
     actions = parser.add_mutually_exclusive_group()
-    actions.add_argument("--list-workflows", action="store_true", help="List the 115 built-in workflows")
+    actions.add_argument("--list-workflows", action="store_true", help="List the 130 built-in workflows")
     actions.add_argument("--import-workflow", metavar="NAME", help="Add a workflow's tasks and exit")
     parser.add_argument("--start-date", help="Workflow start date as YYYY-MM-DD (defaults to today)")
     args = parser.parse_args()
@@ -64,56 +64,56 @@ if __name__ == "__main__":
     main()
 
 
-# Preserved TSX reference (not executable Python):
-# import React from "react";
-#
-# function App() {
-#   return (
-#     <div>
-#       <h1>Hello, React!</h1>
-#       <p>This is a simple TSX component.</p>
-#       <button onClick={() => alert("Button clicked!")}>
-#         Click Me
-#       </button>
-#     </div>
-#   );
-# }
-# import React, { useState } from "react";
-#
-# export default function App() {
-#   const [count, setCount] = useState(0);
-#
-#   return (
-#     <main
-#       style={{
-#         minHeight: "100vh",
-#         display: "grid",
-#         placeItems: "center",
-#         background: "#0f172a",
-#         color: "white",
-#         fontFamily: "system-ui, sans-serif",
-#       }}
-#     >
-#       <div style={{ textAlign: "center" }}>
-#         <h1>My React App</h1>
-#
-#         <p>Count: {count}</p>
-#
-#         <button
-#           onClick={() => setCount((value) => value + 1)}
-#           style={{
-#             padding: "10px 18px",
-#             border: 0,
-#             borderRadius: 8,
-#             background: "#3b82f6",
-#             color: "white",
-#             cursor: "pointer",
-#             fontSize: 16,
-#           }}
-#         >
-#           Click me
-#         </button>
-#       </div>
-#     </main>
-#   );
-# }
+Preserved TSX reference (not executable Python):
+import React from "react";
+
+function App() {
+  return (
+    <div>
+      <h1>Hello, React!</h1>
+      <p>This is a simple TSX component.</p>
+      <button onClick={() => alert("Button clicked!")}>
+        Click Me
+      </button>
+    </div>
+  );
+}
+import React, { useState } from "react";
+
+export default function App() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "#0f172a",
+        color: "white",
+        fontFamily: "system-ui, sans-serif",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <h1>My React App</h1>
+
+        <p>Count: {count}</p>
+
+        <button
+          onClick={() => setCount((value) => value + 1)}
+          style={{
+            padding: "10px 18px",
+            border: 0,
+            borderRadius: 8,
+            background: "#3b82f6",
+            color: "white",
+            cursor: "pointer",
+            fontSize: 16,
+          }}
+        >
+          Click me
+        </button>
+      </div>
+    </main>
+  );
+}
