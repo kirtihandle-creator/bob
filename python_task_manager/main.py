@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--database", type=Path, default=Path(__file__).parent / "data" / "tasks.db",
                         help="SQLite database location")
     actions = parser.add_mutually_exclusive_group()
-    actions.add_argument("--list-workflows", action="store_true", help="List the 100 built-in workflows")
+    actions.add_argument("--list-workflows", action="store_true", help="List the 115 built-in workflows")
     actions.add_argument("--import-workflow", metavar="NAME", help="Add a workflow's tasks and exit")
     parser.add_argument("--start-date", help="Workflow start date as YYYY-MM-DD (defaults to today)")
     args = parser.parse_args()
@@ -64,8 +64,9 @@ if __name__ == "__main__":
     main()
 
 
+# Preserved TSX reference (not executable Python):
 # import React from "react";
-
+#
 # function App() {
 #   return (
 #     <div>
@@ -78,10 +79,10 @@ if __name__ == "__main__":
 #   );
 # }
 # import React, { useState } from "react";
-
+#
 # export default function App() {
 #   const [count, setCount] = useState(0);
-
+#
 #   return (
 #     <main
 #       style={{
@@ -95,9 +96,9 @@ if __name__ == "__main__":
 #     >
 #       <div style={{ textAlign: "center" }}>
 #         <h1>My React App</h1>
-
+#
 #         <p>Count: {count}</p>
-
+#
 #         <button
 #           onClick={() => setCount((value) => value + 1)}
 #           style={{

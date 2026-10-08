@@ -55,7 +55,7 @@ class TaskStoreTests(unittest.TestCase):
 class WorkflowTests(unittest.TestCase):
     def test_all_workflows_and_exact_file_sizes(self):
         names = workflow_names()
-        self.assertEqual(len(names), 100)
+        self.assertEqual(len(names), 115)
         store = TaskStore(":memory:")
         self.addCleanup(store.close)
         for name in names:
@@ -74,7 +74,7 @@ class WorkflowTests(unittest.TestCase):
                 self.assertNotEqual(module.build_tasks()[0]["title"], "Changed copy")
                 for task in module.build_tasks("2026-12-29"):
                     store.save(**task)
-        self.assertEqual(len(store.list_tasks()), 1200)
+        self.assertEqual(len(store.list_tasks()), 1380)
 
     def test_import_persists_tasks(self):
         with tempfile.TemporaryDirectory() as directory:

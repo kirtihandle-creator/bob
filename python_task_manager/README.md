@@ -29,11 +29,12 @@ python main.py --database "E:\my-tasks.db"
 
 ## Built-in workflows
 
-The `task_manager/workflows` directory contains exactly **100 Python files of 100
-nonblank lines each** (10,000 lines total). These reusable templates cover ten
-project categories and ten phases, from discovery to retrospective. Each module
+The `task_manager/workflows` directory contains exactly **115 Python files of 100
+nonblank lines each** (11,500 lines total). The original ten project categories
+cover ten phases, from discovery to retrospective. Event, podcast, and gardening
+projects each add planning, design, implementation, validation, and delivery workflows. Each module
 provides twelve task templates, `build_tasks(start_date=None)`, and `summary()`.
-The code includes template data; these are not 100 separate applications.
+The code includes template data; these are reusable modules within one application.
 
 List the available workflows or import one into your task database:
 
@@ -60,7 +61,7 @@ python -m unittest discover -s tests -v
 - `task_manager/app.py`: desktop interface and actions.
 - `task_manager/storage.py`: validation and SQLite persistence.
 - `tests/test_storage.py`: lifecycle, validation, search, and persistence tests.
-- `task_manager/workflows/`: 100 reusable workflow modules, each exactly 100 lines.
+- `task_manager/workflows/`: 115 reusable workflow modules, each exactly 100 lines.
 
 This is a local, single-user application. A desktop display is required to run the
 interface. On Linux, Tkinter may require your distribution's `python3-tk` package.
