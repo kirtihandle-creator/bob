@@ -69,21 +69,23 @@ public class OrderService {
                 throw ApiException.badRequest("Quantity must be positive for "
                         + productService.get(productId).getName());
             }
-            quantities.merge(productId, quantity, Integer::sum);
-        }
-        for (Map.Entry<String, Integer> entry : quantities.entrySet()) {
-            Product product = productService.get(entry.getKey());
-            int quantity = entry.getValue();
-            if (product.getStock() < quantity) {
-                throw ApiException.conflict("Insufficient stock for " + product.getName()
-                        + ": have " + product.getStock() + ", need " + quantity);
+            try {
+                quantities.merge(productId, quantity, Math::addExact);
+            } catch (ArithmeticException overflow) {
+                throw ApiException.badRequest("Combined quantity for product " + productId + " is too large");
             }
-            order.addItem(OrderItem.of(product, quantity));
         }
-        for (OrderItem item : order.getItems()) {
-            productService.adjustStock(item.getProductId(), -item.getQuantity());
+        // Check-and-deduct happens atomically inside the product service lock.
+        List<Product> reserved = productService.reserveStock(quantities);
+        for (Product product : reserved) {
+            order.addItem(OrderItem.of(product, quantities.get(product.getId())));
         }
-        return orders.save(order);
+        try {
+            return orders.save(order);
+        } catch (RuntimeException e) {
+            productService.releaseStock(quantities);
+            throw e;
+        }
     }
 
     public synchronized Order changeStatus(String id, String rawStatus) {
@@ -111,12 +113,10 @@ public class OrderService {
     }
 
     private void releaseStock(Order order) {
+        Map<String, Integer> quantities = new LinkedHashMap<>();
         for (OrderItem item : order.getItems()) {
-            try {
-                productService.adjustStock(item.getProductId(), item.getQuantity());
-            } catch (ApiException ignored) {
-                // Product was deleted after the order shipped; nothing to restore.
-            }
+            quantities.merge(item.getProductId(), item.getQuantity(), Integer::sum);
         }
+        productService.releaseStock(quantities);
     }
 }

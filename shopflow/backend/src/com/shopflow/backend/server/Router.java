@@ -6,6 +6,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +73,9 @@ public class Router implements HttpHandler {
             JsonResponse.sendError(exchange, e.getStatus(), e.getMessage());
         } catch (IllegalArgumentException e) {
             JsonResponse.sendError(exchange, 400, e.getMessage());
+        } catch (UncheckedIOException e) {
+            LOG.log(Level.SEVERE, "Persistence failure on " + method + " " + path, e);
+            JsonResponse.sendError(exchange, 500, "Data could not be saved: " + e.getMessage());
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Unhandled error on " + method + " " + path, e);
             JsonResponse.sendError(exchange, 500, "Internal server error");

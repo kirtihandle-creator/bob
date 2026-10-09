@@ -65,21 +65,48 @@ public abstract class InMemoryRepository<T extends Identifiable> {
         return id != null && store.containsKey(id);
     }
 
+    /**
+     * Stores the entity and notifies the change listener. If the listener
+     * fails (for example the disk write fails) the in-memory change is rolled
+     * back so memory and disk never disagree, and the failure is rethrown.
+     */
     public T save(T entity) {
-        if (entity.getId() == null || entity.getId().isBlank()) {
+        boolean isNew = entity.getId() == null || entity.getId().isBlank();
+        if (isNew) {
             entity.setId(IdGenerator.next(idPrefix));
         }
-        store.put(entity.getId(), entity);
-        changeListener.accept(this);
+        T previous = store.put(entity.getId(), entity);
+        try {
+            changeListener.accept(this);
+        } catch (RuntimeException e) {
+            if (previous == null) {
+                store.remove(entity.getId());
+                if (isNew) {
+                    entity.setId(null);
+                }
+            } else {
+                store.put(entity.getId(), previous);
+            }
+            throw e;
+        }
         return entity;
     }
 
     public boolean delete(String id) {
-        boolean removed = id != null && store.remove(id) != null;
-        if (removed) {
-            changeListener.accept(this);
+        if (id == null) {
+            return false;
         }
-        return removed;
+        T removed = store.remove(id);
+        if (removed == null) {
+            return false;
+        }
+        try {
+            changeListener.accept(this);
+        } catch (RuntimeException e) {
+            store.put(id, removed);
+            throw e;
+        }
+        return true;
     }
 
     public int count() {

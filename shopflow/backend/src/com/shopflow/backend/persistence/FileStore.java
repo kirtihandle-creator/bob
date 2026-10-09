@@ -5,6 +5,7 @@ import com.shopflow.common.json.Json;
 import com.shopflow.common.model.Identifiable;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,6 +72,12 @@ public class FileStore {
         return entities;
     }
 
+    /**
+     * Writes the repository to disk.
+     *
+     * @throws UncheckedIOException when the data could not be written; the caller
+     *                              must not report the mutation as saved
+     */
     public synchronized <T extends Identifiable> void save(InMemoryRepository<T> repository) {
         Path file = fileFor(repository.getName());
         Path temp = dataDir.resolve(repository.getName() + ".json.tmp");
@@ -80,6 +87,12 @@ public class FileStore {
             Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Failed to persist " + repository.getName(), e);
+            try {
+                Files.deleteIfExists(temp);
+            } catch (IOException cleanup) {
+                LOG.log(Level.WARNING, "Could not remove temp file " + temp, cleanup);
+            }
+            throw new UncheckedIOException("Failed to persist " + repository.getName(), e);
         }
     }
 

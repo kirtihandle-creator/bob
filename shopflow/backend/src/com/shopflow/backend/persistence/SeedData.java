@@ -93,12 +93,27 @@ public final class SeedData {
         Customer chen = customers.save(new Customer(null, "Chen Wei", "chen@example.com",
                 "555-0103", "5 Lotus Rd, Capital City"));
 
-        orders.save(order(alice, OrderStatus.PAID, "", OrderItem.of(laptop, 1), OrderItem.of(mouse, 2)));
-        orders.save(order(bob, OrderStatus.SHIPPED, "", OrderItem.of(novel, 3), OrderItem.of(cookbook, 1)));
-        orders.save(order(chen, OrderStatus.NEW, "Gift wrap please",
-                OrderItem.of(headphones, 1), OrderItem.of(kettle, 1)));
+        Order[] seeded = {
+            order(alice, OrderStatus.PAID, "", OrderItem.of(laptop, 1), OrderItem.of(mouse, 2)),
+            order(bob, OrderStatus.SHIPPED, "", OrderItem.of(novel, 3), OrderItem.of(cookbook, 1)),
+            order(chen, OrderStatus.NEW, "Gift wrap please",
+                    OrderItem.of(headphones, 1), OrderItem.of(kettle, 1)),
+        };
+        for (Order order : seeded) {
+            reserveStock(products, order);
+            orders.save(order);
+        }
 
         LOG.info("Seeded demo categories, products, customers and orders");
+    }
+
+    /** Mirrors OrderService: stock is reserved at order creation. */
+    private static void reserveStock(ProductRepository products, Order order) {
+        for (OrderItem item : order.getItems()) {
+            Product product = products.findById(item.getProductId()).orElseThrow();
+            product.setStock(product.getStock() - item.getQuantity());
+            products.save(product);
+        }
     }
 
     private static Order order(Customer customer, OrderStatus status, String notes, OrderItem... items) {
