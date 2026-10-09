@@ -63,8 +63,14 @@ public final class Main {
         fileStore.attach(customers);
         fileStore.attach(orders);
 
+        try {
+            SeedData.bootstrapAdmin(users, config);
+        } catch (IllegalStateException e) {
+            LOG.severe(e.getMessage());
+            System.exit(1);
+        }
         if (config.isSeedOnEmpty()) {
-            SeedData.seedIfEmpty(users, categories, products, customers, orders);
+            SeedData.seedCatalogIfEmpty(categories, products, customers, orders);
         }
 
         AuthService authService = new AuthService(users, config.getTokenTtlMillis());

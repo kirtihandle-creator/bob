@@ -5,6 +5,7 @@ import com.shopflow.backend.repository.CustomerRepository;
 import com.shopflow.backend.repository.OrderRepository;
 import com.shopflow.backend.repository.ProductRepository;
 import com.shopflow.backend.repository.UserRepository;
+import com.shopflow.backend.server.ServerConfig;
 import com.shopflow.backend.util.PasswordHasher;
 import com.shopflow.common.model.Category;
 import com.shopflow.common.model.Customer;
@@ -17,8 +18,16 @@ import com.shopflow.common.model.User;
 import java.util.logging.Logger;
 
 /**
- * Populates empty repositories with demo data so the desktop client has
- * something to show on first launch. Default login: admin / admin123.
+ * Populates empty repositories on first start.
+ *
+ * <p>No credentials are hardcoded. The first administrator is created only
+ * from an explicitly configured bootstrap password
+ * ({@code -Dshopflow.adminPassword=...} or {@code SHOPFLOW_ADMIN_PASSWORD}).
+ * When the user store is empty and no password is configured, startup is
+ * refused so the backend is never exposed with a guessable account.
+ *
+ * <p>Demo catalog data (categories, products, customers, orders) contains no
+ * secrets and is seeded when {@code seedOnEmpty} is enabled.
  */
 public final class SeedData {
 
@@ -27,14 +36,36 @@ public final class SeedData {
     private SeedData() {
     }
 
-    public static void seedIfEmpty(UserRepository users, CategoryRepository categories,
-                                   ProductRepository products, CustomerRepository customers,
-                                   OrderRepository orders) {
-        if (users.isEmpty()) {
-            users.save(new User(null, "admin", PasswordHasher.hash("admin123"), User.ROLE_ADMIN, "Administrator"));
-            users.save(new User(null, "staff", PasswordHasher.hash("staff123"), User.ROLE_STAFF, "Store Staff"));
-            LOG.info("Seeded default users (admin/admin123, staff/staff123)");
+    /**
+     * Creates the bootstrap administrator if no users exist yet.
+     *
+     * @throws IllegalStateException when users are empty and no password is configured
+     */
+    public static void bootstrapAdmin(UserRepository users, ServerConfig config) {
+        if (!users.isEmpty()) {
+            if (config.hasBootstrapAdminPassword()) {
+                LOG.warning("Bootstrap admin password is set but users already exist; it is ignored");
+            }
+            return;
         }
+        if (!config.hasBootstrapAdminPassword()) {
+            throw new IllegalStateException("No users exist and no bootstrap administrator password is "
+                    + "configured. Start once with -Dshopflow.adminPassword=<password> "
+                    + "(or SHOPFLOW_ADMIN_PASSWORD) to create the first administrator.");
+        }
+        String weakness = PasswordHasher.weaknessReason(config.getBootstrapAdminPassword());
+        if (weakness != null) {
+            throw new IllegalStateException("Bootstrap administrator password rejected: " + weakness);
+        }
+        String username = config.getBootstrapAdminUser();
+        users.save(new User(null, username, PasswordHasher.hash(config.getBootstrapAdminPassword()),
+                User.ROLE_ADMIN, "Administrator"));
+        LOG.info(() -> "Created bootstrap administrator '" + username
+                + "'. Remove the bootstrap password from the environment now.");
+    }
+
+    public static void seedCatalogIfEmpty(CategoryRepository categories, ProductRepository products,
+                                          CustomerRepository customers, OrderRepository orders) {
         if (!categories.isEmpty() || !products.isEmpty()) {
             return;
         }
@@ -62,30 +93,23 @@ public final class SeedData {
         Customer chen = customers.save(new Customer(null, "Chen Wei", "chen@example.com",
                 "555-0103", "5 Lotus Rd, Capital City"));
 
-        Order first = new Order();
-        first.setCustomerId(alice.getId());
-        first.setCustomerName(alice.getName());
-        first.addItem(OrderItem.of(laptop, 1));
-        first.addItem(OrderItem.of(mouse, 2));
-        first.setStatus(OrderStatus.PAID);
-        orders.save(first);
-
-        Order second = new Order();
-        second.setCustomerId(bob.getId());
-        second.setCustomerName(bob.getName());
-        second.addItem(OrderItem.of(novel, 3));
-        second.addItem(OrderItem.of(cookbook, 1));
-        second.setStatus(OrderStatus.SHIPPED);
-        orders.save(second);
-
-        Order third = new Order();
-        third.setCustomerId(chen.getId());
-        third.setCustomerName(chen.getName());
-        third.addItem(OrderItem.of(headphones, 1));
-        third.addItem(OrderItem.of(kettle, 1));
-        third.setNotes("Gift wrap please");
-        orders.save(third);
+        orders.save(order(alice, OrderStatus.PAID, "", OrderItem.of(laptop, 1), OrderItem.of(mouse, 2)));
+        orders.save(order(bob, OrderStatus.SHIPPED, "", OrderItem.of(novel, 3), OrderItem.of(cookbook, 1)));
+        orders.save(order(chen, OrderStatus.NEW, "Gift wrap please",
+                OrderItem.of(headphones, 1), OrderItem.of(kettle, 1)));
 
         LOG.info("Seeded demo categories, products, customers and orders");
+    }
+
+    private static Order order(Customer customer, OrderStatus status, String notes, OrderItem... items) {
+        Order order = new Order();
+        order.setCustomerId(customer.getId());
+        order.setCustomerName(customer.getName());
+        order.setNotes(notes);
+        for (OrderItem item : items) {
+            order.addItem(item);
+        }
+        order.setStatus(status);
+        return order;
     }
 }

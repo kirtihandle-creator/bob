@@ -22,9 +22,12 @@ public class ServerConfig {
     private final int threadPoolSize;
     private final String pythonCommand;
     private final Path reportScript;
+    private final String bootstrapAdminUser;
+    private final String bootstrapAdminPassword;
 
     public ServerConfig(int port, Path dataDir, long tokenTtlMillis, boolean seedOnEmpty,
-                        int threadPoolSize, String pythonCommand, Path reportScript) {
+                        int threadPoolSize, String pythonCommand, Path reportScript,
+                        String bootstrapAdminUser, String bootstrapAdminPassword) {
         this.port = port;
         this.dataDir = dataDir;
         this.tokenTtlMillis = tokenTtlMillis;
@@ -32,6 +35,8 @@ public class ServerConfig {
         this.threadPoolSize = threadPoolSize;
         this.pythonCommand = pythonCommand;
         this.reportScript = reportScript;
+        this.bootstrapAdminUser = bootstrapAdminUser;
+        this.bootstrapAdminPassword = bootstrapAdminPassword;
     }
 
     public static ServerConfig fromEnvironment() {
@@ -43,8 +48,10 @@ public class ServerConfig {
         String python = stringSetting("shopflow.python", "SHOPFLOW_PYTHON", DEFAULT_PYTHON);
         String script = stringSetting("shopflow.reportScript", "SHOPFLOW_REPORT_SCRIPT",
                 "backend/src/com/shopflow/backend/service/report_service.py");
+        String adminUser = stringSetting("shopflow.adminUser", "SHOPFLOW_ADMIN_USER", "admin");
+        String adminPassword = stringSetting("shopflow.adminPassword", "SHOPFLOW_ADMIN_PASSWORD", "");
         return new ServerConfig(port, Paths.get(dir).toAbsolutePath(), ttl, seed, threads,
-                python, Paths.get(script).toAbsolutePath());
+                python, Paths.get(script).toAbsolutePath(), adminUser, adminPassword);
     }
 
     private static String stringSetting(String property, String env, String fallback) {
@@ -99,11 +106,26 @@ public class ServerConfig {
         return reportScript;
     }
 
+    public String getBootstrapAdminUser() {
+        return bootstrapAdminUser;
+    }
+
+    /** Only used to create the first administrator; never persisted. */
+    public String getBootstrapAdminPassword() {
+        return bootstrapAdminPassword;
+    }
+
+    public boolean hasBootstrapAdminPassword() {
+        return bootstrapAdminPassword != null && !bootstrapAdminPassword.isBlank();
+    }
+
     @Override
     public String toString() {
         return "ServerConfig{port=" + port + ", dataDir=" + dataDir
                 + ", tokenTtlMillis=" + tokenTtlMillis + ", seedOnEmpty=" + seedOnEmpty
                 + ", threads=" + threadPoolSize + ", python=" + pythonCommand
-                + ", reportScript=" + reportScript + "}";
+                + ", reportScript=" + reportScript
+                + ", bootstrapAdminUser=" + bootstrapAdminUser
+                + ", bootstrapAdminPassword=" + (hasBootstrapAdminPassword() ? "<set>" : "<unset>") + "}";
     }
 }
