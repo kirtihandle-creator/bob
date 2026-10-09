@@ -1,0 +1,145 @@
+package com.shopflow.frontend.ui;
+
+import com.shopflow.common.model.Product;
+import com.shopflow.common.util.Dates;
+import com.shopflow.common.util.Money;
+import com.shopflow.frontend.AppContext;
+import com.shopflow.frontend.api.ReportApi;
+import com.shopflow.frontend.ui.components.ToolbarFactory;
+import com.shopflow.frontend.util.AsyncTask;
+import com.shopflow.frontend.util.Dialogs;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import java.util.Map;
+
+/**
+ * Home screen showing the statistics computed by the backend's Python
+ * report script: counts, revenue, low stock, top products and status mix.
+ */
+public class DashboardPanel extends JPanel {
+
+    private static final long serialVersionUID = 1L;
+
+    private final AppContext context;
+    private final StatusBar statusBar;
+    private final JLabel productsStat = stat();
+    private final JLabel customersStat = stat();
+    private final JLabel ordersStat = stat();
+    private final JLabel revenueStat = stat();
+    private final JLabel inventoryStat = stat();
+    private final JLabel generatedLabel = Theme.muted("Not loaded yet");
+    private final DefaultListModel<String> lowStockModel = new DefaultListModel<>();
+    private final DefaultListModel<String> topProductsModel = new DefaultListModel<>();
+    private final DefaultListModel<String> statusModel = new DefaultListModel<>();
+    private final DefaultListModel<String> dailyModel = new DefaultListModel<>();
+
+    public DashboardPanel(AppContext context, StatusBar statusBar) {
+        super(new BorderLayout(Theme.GAP, Theme.GAP));
+        this.context = context;
+        this.statusBar = statusBar;
+        setBorder(Theme.padding());
+        add(buildHeader(), BorderLayout.NORTH);
+        add(buildBody(), BorderLayout.CENTER);
+    }
+
+    private JPanel buildHeader() {
+        JPanel header = new JPanel(new BorderLayout());
+        header.add(Theme.title("Dashboard"), BorderLayout.WEST);
+        JPanel right = new JPanel(new BorderLayout(Theme.GAP, 0));
+        right.add(generatedLabel, BorderLayout.CENTER);
+        right.add(ToolbarFactory.button("Refresh", this::refresh), BorderLayout.EAST);
+        header.add(right, BorderLayout.EAST);
+        return header;
+    }
+
+    private JPanel buildBody() {
+        JPanel stats = new JPanel(new GridLayout(1, 5, Theme.GAP, 0));
+        stats.add(card("Products", productsStat));
+        stats.add(card("Customers", customersStat));
+        stats.add(card("Orders", ordersStat));
+        stats.add(card("Revenue", revenueStat));
+        stats.add(card("Inventory value", inventoryStat));
+
+        JPanel lists = new JPanel(new GridLayout(2, 2, Theme.GAP, Theme.GAP));
+        lists.add(listCard("Low stock", lowStockModel));
+        lists.add(listCard("Top products", topProductsModel));
+        lists.add(listCard("Orders by status", statusModel));
+        lists.add(listCard("Daily revenue", dailyModel));
+
+        JPanel body = new JPanel(new BorderLayout(0, Theme.GAP));
+        body.add(stats, BorderLayout.NORTH);
+        body.add(lists, BorderLayout.CENTER);
+        return body;
+    }
+
+    private static JLabel stat() {
+        JLabel label = new JLabel("-");
+        label.setFont(Theme.STAT);
+        return label;
+    }
+
+    private static JPanel card(String title, JLabel value) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(Theme.card());
+        card.setBackground(Theme.SURFACE);
+        card.add(Theme.muted(title), BorderLayout.NORTH);
+        card.add(value, BorderLayout.CENTER);
+        return card;
+    }
+
+    private static JPanel listCard(String title, DefaultListModel<String> model) {
+        JPanel card = new JPanel(new BorderLayout(0, Theme.GAP));
+        card.setBorder(Theme.card());
+        card.add(Theme.heading(title), BorderLayout.NORTH);
+        JList<String> list = new JList<>(model);
+        list.setFont(Theme.MONO);
+        card.add(new JScrollPane(list), BorderLayout.CENTER);
+        return card;
+    }
+
+    public void refresh() {
+        statusBar.setBusy(true);
+        AsyncTask.run(context.reports()::summary, this::render, error -> {
+            statusBar.error("Dashboard failed to load");
+            generatedLabel.setText("Report unavailable");
+            Dialogs.error(this, "Dashboard", error);
+        }, () -> statusBar.setBusy(false));
+    }
+
+    private void render(ReportApi.Summary summary) {
+        productsStat.setText(String.valueOf(summary.productCount()));
+        customersStat.setText(String.valueOf(summary.customerCount()));
+        ordersStat.setText(String.valueOf(summary.orderCount()));
+        revenueStat.setText(Money.format(summary.revenue()));
+        inventoryStat.setText(Money.format(summary.inventoryValue()));
+        generatedLabel.setText("Generated by " + summary.generatedBy()
+                + " at " + Dates.formatDateTime(summary.generatedAt()));
+
+        lowStockModel.clear();
+        for (Product product : summary.lowStock()) {
+            lowStockModel.addElement(String.format("%-28s %4d left", product.getName(), product.getStock()));
+        }
+        if (lowStockModel.isEmpty()) {
+            lowStockModel.addElement("All products sufficiently stocked");
+        }
+        topProductsModel.clear();
+        for (ReportApi.TopProduct top : summary.topProducts()) {
+            topProductsModel.addElement(String.format("%-28s %4d sold", top.product(), top.quantity()));
+        }
+        statusModel.clear();
+        for (Map.Entry<String, Integer> entry : summary.statusBreakdown().entrySet()) {
+            statusModel.addElement(String.format("%-12s %4d", entry.getKey(), entry.getValue()));
+        }
+        dailyModel.clear();
+        for (ReportApi.DailyRevenue day : summary.dailyRevenue()) {
+            dailyModel.addElement(String.format("%s  %12s", day.date(), Money.format(day.revenue())));
+        }
+        statusBar.success("Dashboard updated");
+    }
+}
