@@ -1,16 +1,19 @@
 """
 report_service.py
 
-NOTE: This is the ONE backend file written in Python inside an otherwise
-pure-Java backend. It is intentionally inconsistent with the rest of the
-project: the Java build (javac) ignores it, no Java class calls it, and it
-cannot be loaded by the JVM. It exists only to demonstrate a mixed-language
-backend file that does NOT belong in this codebase.
+The ONE backend file written in Python inside an otherwise pure-Java
+backend. It is NOT standalone: the Java class
+com.shopflow.backend.service.ReportService launches this script with the
+Python interpreter every time a client requests /api/reports/summary or
+/api/reports/low-stock, and the Swing dashboard renders whatever this
+script prints. If Python is missing, or this file is moved, the Java
+backend answers 503 and the dashboard shows an error.
 
-It mirrors what a Java ReportService would do: read the JSON files that the
-Java backend persists under data/ and compute dashboard statistics.
-
-Run standalone:  python report_service.py ../../../../../../data
+Contract with Java:
+  argv[1]  -> data directory containing products.json, customers.json,
+              orders.json written by com.shopflow.backend.persistence.FileStore
+  stdout   -> one JSON object (the report)
+  exit 0   -> success; any other exit code is reported as HTTP 502
 """
 
 import json
@@ -19,12 +22,12 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 
-LOW_STOCK_THRESHOLD = 5
-CANCELLED = "CANCELLED"
+LOW_STOCK_THRESHOLD = 5   # must match Product.LOW_STOCK_THRESHOLD in Java
+CANCELLED = "CANCELLED"   # must match OrderStatus.CANCELLED in Java
 
 
 def load(data_dir, name):
-    """Load one repository file (products.json, orders.json, ...)."""
+    """Load one repository file written by the Java FileStore."""
     path = os.path.join(data_dir, name + ".json")
     if not os.path.exists(path):
         return []
@@ -96,9 +99,14 @@ def build_report(data_dir):
 
 
 def main(argv):
-    data_dir = argv[1] if len(argv) > 1 else "data"
-    report = build_report(data_dir)
-    print(json.dumps(report, indent=2))
+    if len(argv) < 2:
+        sys.stderr.write("usage: report_service.py <data-dir>\n")
+        return 2
+    data_dir = argv[1]
+    if not os.path.isdir(data_dir):
+        sys.stderr.write("data directory not found: %s\n" % data_dir)
+        return 3
+    print(json.dumps(build_report(data_dir)))
     return 0
 
 
