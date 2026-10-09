@@ -30,19 +30,7 @@ public class User implements Identifiable {
         this.displayName = displayName;
     }
 
-    @Override
-    public String getId() {
-        return id;
-    }
 
-    @Override
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
 
     public void setUsername(String username) {
         this.username = username;
