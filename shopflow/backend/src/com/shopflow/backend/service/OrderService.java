@@ -10,6 +10,7 @@ import com.shopflow.common.model.OrderItem;
 import com.shopflow.common.model.OrderStatus;
 import com.shopflow.common.model.Product;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -59,12 +60,20 @@ public class OrderService {
         order.setCustomerId(customer.getId());
         order.setCustomerName(customer.getName());
         order.setNotes(Identifiable.str(body, "notes"));
+        // Merge lines that repeat the same product so the stock check sees the combined quantity.
+        Map<String, Integer> quantities = new LinkedHashMap<>();
         for (Map<String, Object> raw : Json.mapList(rawItems, map -> map)) {
-            Product product = productService.get(Identifiable.str(raw, "productId"));
+            String productId = Identifiable.str(raw, "productId");
             int quantity = Identifiable.integer(raw, "quantity");
             if (quantity <= 0) {
-                throw ApiException.badRequest("Quantity must be positive for " + product.getName());
+                throw ApiException.badRequest("Quantity must be positive for "
+                        + productService.get(productId).getName());
             }
+            quantities.merge(productId, quantity, Integer::sum);
+        }
+        for (Map.Entry<String, Integer> entry : quantities.entrySet()) {
+            Product product = productService.get(entry.getKey());
+            int quantity = entry.getValue();
             if (product.getStock() < quantity) {
                 throw ApiException.conflict("Insufficient stock for " + product.getName()
                         + ": have " + product.getStock() + ", need " + quantity);
